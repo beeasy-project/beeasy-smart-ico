@@ -12,23 +12,33 @@ contract ERC20Interface {
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 }
 
-contract EasyToken is ERC20Interface {
+contract Ownable {
+  address public owner;
+
+  function Ownable() public {
+    owner = msg.sender;
+  }
+
+  modifier onlyOwner() {
+    require(msg.sender == owner);
+    _;
+  }
+}
+
+contract EasyToken is ERC20Interface, Ownable {
     // Public variables of the token
     string public constant name = "EasyToken";
     string public constant symbol = "ETKN";
     uint8 public decimals = 18;
     uint256 public totalSupply = 2050000 * 10 ** uint256(decimals);
     
-    address public owner;
-
     mapping (address => uint256) public balanceOf;
     mapping (address => mapping (address => uint256)) public allowance;
 
     event Burn(address indexed from, uint256 value);
 
     function EasyToken() public {
-        owner = msg.sender;
-        balanceOf[msg.sender] = totalSupply;
+        balanceOf[owner] = totalSupply;
     }
 
     function totalSupply() constant returns (uint256 curTotalSupply) {
@@ -43,7 +53,7 @@ contract EasyToken is ERC20Interface {
         return allowance[_owner][_spender];
     }
 
-    function _transfer(address _from, address _to, uint256 _value) internal returns (bool success) {
+    function _transfer(address _from, address _to, uint256 _value) private returns (bool success) {
         require(_to != 0x0);
         require(balanceOf[_from] >= _value);
         require(balanceOf[_to] + _value > balanceOf[_to]);
@@ -51,9 +61,10 @@ contract EasyToken is ERC20Interface {
         uint256 previousBalances = balanceOf[_from] + balanceOf[_to];
         balanceOf[_from] -= _value;
         balanceOf[_to] += _value;
+        assert(balanceOf[_from] + balanceOf[_to] == previousBalances);
+
         Transfer(_from, _to, _value);
 
-        assert(balanceOf[_from] + balanceOf[_to] == previousBalances);
         return true;
     }
 
@@ -93,6 +104,8 @@ contract EasyToken is ERC20Interface {
      * @param _value the max amount they can spend
      */
     function approve(address _spender, uint256 _value) public returns (bool success) {
+        require((_value == 0) || (allowance[msg.sender][_spender] == 0));
+
         allowance[msg.sender][_spender] = _value;
         Approval(msg.sender, _spender, _value);
         return true;
@@ -105,29 +118,11 @@ contract EasyToken is ERC20Interface {
      *
      * @param _value the amount of money to burn
      */
-    function burn(uint256 _value) public returns (bool success) {
+    function burn(uint256 _value) onlyOwner public returns (bool success) {
         require(balanceOf[msg.sender] >= _value);
         balanceOf[msg.sender] -= _value;
         totalSupply -= _value;
         Burn(msg.sender, _value);
-        return true;
-    }
-
-    /**
-     * Destroy tokens from other ccount
-     *
-     * Remove `_value` tokens from the system irreversibly on behalf of `_from`.
-     *
-     * @param _from the address of the sender
-     * @param _value the amount of money to burn
-     */
-    function burnFrom(address _from, uint256 _value) public returns (bool success) {
-        require(balanceOf[_from] >= _value);
-        require(_value <= allowance[_from][msg.sender]);
-        balanceOf[_from] -= _value;
-        allowance[_from][msg.sender] -= _value;
-        totalSupply -= _value;
-        Burn(_from, _value);
         return true;
     }
 }
