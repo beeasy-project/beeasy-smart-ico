@@ -29,7 +29,7 @@ contract EasyToken is ERC20Interface, Ownable {
     // Public variables of the token
     string public constant name = "EasyToken";
     string public constant symbol = "ETKN";
-    uint8 public decimals = 18;
+    uint8 public decimals = 4;
     uint256 public totalSupply = 2050000 * 10 ** uint256(decimals);
     
     mapping (address => uint256) public balanceOf;
